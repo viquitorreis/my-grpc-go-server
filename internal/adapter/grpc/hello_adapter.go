@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/viquitorreis/my-grpc-proto/protogen/go/hello"
 )
@@ -13,4 +14,22 @@ func (a *GrpcAdapter) SayHello(ctx context.Context, req *hello.HelloRequest) (*h
 	return &hello.HelloResponse{
 		Message: greet,
 	}, nil
+}
+
+func (a *GrpcAdapter) SayManyHello(req *hello.HelloRequest, stream hello.HelloService_SayManyHelloServer) error {
+	for i := 0; i < 100; i++ {
+		greet := a.helloService.GenerateHello(req.Name)
+		res := fmt.Sprintf("[%d] %s", i, greet)
+		stream.Send(
+			&hello.HelloResponse{
+				Message: res,
+			},
+		)
+
+		// rand.NewSource(time.Now().UnixNano())                        // Generates a new seed for the random number generator
+		// randomDuration := rand.Intn(50) + 1                          // Generates a number between 1 and 50
+		// time.Sleep(time.Duration(randomDuration) * time.Millisecond) // Use the random number as the sleep duration
+	}
+
+	return nil
 }
