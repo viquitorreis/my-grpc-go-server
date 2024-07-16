@@ -59,3 +59,28 @@ func (a *GrpcAdapter) SayHelloToEveryone(stream hello.HelloService_SayHelloToEve
 		res += greet + "\n"
 	}
 }
+
+func (a *GrpcAdapter) SayHelloContinuous(stream hello.HelloService_SayHelloContinuousServer) error {
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+
+		if err != nil {
+			log.Fatalln("Error receiving stream:", err)
+		}
+
+		// para cada request vamos gerar uma resposta e retornar para o client gRPC imediatamente
+		greet := a.helloService.GenerateHello(req.Name)
+		err = stream.Send(
+			&hello.HelloResponse{
+				Message: greet,
+			},
+		)
+
+		if err != nil {
+			log.Fatalln("Error sending stream:", err)
+		}
+	}
+}
