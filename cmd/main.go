@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"log"
+	"math/rand"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,6 +11,7 @@ import (
 	"github.com/viquitorreis/my-grpc-go-server/internal/adapter/database"
 	mygrpc "github.com/viquitorreis/my-grpc-go-server/internal/adapter/grpc"
 	app "github.com/viquitorreis/my-grpc-go-server/internal/application"
+	"github.com/viquitorreis/my-grpc-go-server/internal/application/domain/bank"
 )
 
 func main() {
@@ -27,10 +29,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error creating database adapter: %v", err)
 	}
-	runDummyOrm(databaseAdapter)
 
 	hs := &app.HelloService{}
-	bs := &app.BankService{}
+	bs := app.NewBankService(databaseAdapter)
+
+	go generateExchangeRates(bs, "USD", "BRL", 5*time.Second)
 
 	grpcAdapter := mygrpc.NewGrpcAdapter(hs, bs, 9090)
 	grpcAdapter.Run()
@@ -54,4 +57,25 @@ func runDummyOrm(da *database.DatabaseAdapter) {
 	}
 
 	log.Println("Data saved and retrieved successfully: ", res)
+}
+
+func generateExchangeRates(bs *app.BankService, fromCurrency, toCurrency string, duration time.Duration) {
+	ticker := time.NewTicker(duration)
+
+	for range ticker.C {
+		now := time.Now()
+		validFrom := now.Truncate(time.Second).Add(3 * time.Second)
+		validTo := validFrom.Add(-1 * time.Millisecond)
+
+		// exchange rate a cada loop
+		dummyRate := bank.ExchangeRate{
+			FromCurrency:       fromCurrency,
+			ToCurrency:         toCurrency,
+			ValidFromTimestamp: validFrom,
+			ValidToTimestamp:   validTo,
+			Rate:               2000 + float64(rand.Intn(300)),
+		}
+
+		bs.CreateExchangeRate(dummyRate)
+	}
 }
