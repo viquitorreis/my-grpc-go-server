@@ -1,0 +1,7 @@
+- DIRTY DATABASE VERSION
+
+    migrate -path <path_migrations> -database postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable force <version>
+
+- INSTALAR MIGRATE CLI
+
+    go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
