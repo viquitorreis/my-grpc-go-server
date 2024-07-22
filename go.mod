@@ -5,7 +5,7 @@ go 1.22.5
 require (
 	github.com/golang-migrate/migrate/v4 v4.17.1
 	github.com/google/uuid v1.6.0
-	github.com/viquitorreis/my-grpc-proto v0.0.7
+	github.com/viquitorreis/my-grpc-proto v0.0.8
 	google.golang.org/genproto v0.0.0-20240711142825-46eb208f015d
 	google.golang.org/grpc v1.65.0
 	gorm.io/driver/postgres v1.5.9
