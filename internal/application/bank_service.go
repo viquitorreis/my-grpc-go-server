@@ -19,14 +19,14 @@ func NewBankService(port port.BankDatabasePort) *BankService {
 	return &BankService{db: port}
 }
 
-func (s *BankService) FindCurrentBalance(accountId string) float64 {
+func (s *BankService) FindCurrentBalance(accountId string) (float64, error) {
 	bankAccount, err := s.db.GetBankAccountNumber(accountId)
 	if err != nil {
 		log.Printf("failed to get bank account number: %v\n", err)
-		return 0.0
+		return 0.0, err
 	}
 
-	return bankAccount.CurrentBalance
+	return bankAccount.CurrentBalance, nil
 }
 
 func (s *BankService) CreateExchangeRate(r bank.ExchangeRate) (uuid.UUID, error) {
@@ -47,13 +47,13 @@ func (s *BankService) CreateExchangeRate(r bank.ExchangeRate) (uuid.UUID, error)
 	return s.db.CreateExchangeRate(exchangeRateOrm)
 }
 
-func (s *BankService) GetExchangeRate(fromCurrency, toCurrency string, ts time.Time) float64 {
+func (s *BankService) GetExchangeRate(fromCurrency, toCurrency string, ts time.Time) (float64, error) {
 	exchangeRate, err := s.db.GetExchangeRate(fromCurrency, toCurrency, ts)
 	if err != nil {
-		return 0
+		return 0, err
 	}
 
-	return float64(exchangeRate.Rate)
+	return float64(exchangeRate.Rate), nil
 }
 
 func (s *BankService) CreateTransaction(account string, t bank.Transaction) (uuid.UUID, error) {
@@ -63,7 +63,11 @@ func (s *BankService) CreateTransaction(account string, t bank.Transaction) (uui
 	bankAccOrm, err := s.db.GetBankAccountNumber(account)
 	if err != nil {
 		log.Printf("failed to get bank account number: %v\n", err)
-		return uuid.Nil, err
+		return uuid.Nil, fmt.Errorf("failed to get bank account number: %w", err)
+	}
+
+	if t.TransactionType == bank.TransactionTypeOut && bankAccOrm.CurrentBalance < t.Amount {
+		return bankAccOrm.AccountUUID, fmt.Errorf("insufficient funds %v < %v", bankAccOrm.CurrentBalance, t.Amount)
 	}
 
 	transactionOrm := database.BankTransactionOrm{
@@ -139,6 +143,7 @@ func (s *BankService) Transfer(tt bank.TransferTransaction) (uuid.UUID, bool, er
 	transferOrm := database.BankTransferOrm{
 		TransferUUID:      newTransferUUID,
 		FromAccountUUID:   fromAccOrm.AccountUUID,
+		ToAccountUUID:     toAccOrm.AccountUUID,
 		Currency:          tt.Currency,
 		Amount:            tt.Amount,
 		TransferTimestamp: now,

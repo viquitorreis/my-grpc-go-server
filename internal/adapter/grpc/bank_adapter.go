@@ -6,6 +6,10 @@ import (
 	"log"
 	"time"
 
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	domainBank "github.com/viquitorreis/my-grpc-go-server/internal/application/domain/bank"
 	"github.com/viquitorreis/my-grpc-proto/protogen/go/bank"
 	"google.golang.org/genproto/googleapis/type/date"
@@ -14,7 +18,12 @@ import (
 
 func (a *GrpcAdapter) GetCurrentBalance(ctx context.Context, req *bank.CurrentBalanceRequest) (*bank.CurrentBalanceResponse, error) {
 	now := time.Now()
-	bal := a.bankService.FindCurrentBalance(req.AccountNumber)
+	bal, err := a.bankService.FindCurrentBalance(req.AccountNumber)
+	if err != nil {
+		log.Printf("failed to get current balance: %v\n", err)
+		return nil, status.Error(codes.FailedPrecondition, "failed to get current balance")
+	}
+
 	return &bank.CurrentBalanceResponse{
 		Amount: bal,
 		CurrentDate: &date.Date{
@@ -35,7 +44,21 @@ func (a *GrpcAdapter) FetchExchangeRates(req *bank.ExchangeRateRequest, stream b
 			return nil
 		default:
 			now := time.Now().Truncate(time.Second)
-			rate := a.bankService.GetExchangeRate(req.FromCurrency, req.ToCurrency, now)
+			rate, err := a.bankService.GetExchangeRate(req.FromCurrency, req.ToCurrency, now)
+			if err != nil {
+				log.Printf("failed to get exchange rate: %v\n", err)
+				s := status.New(codes.FailedPrecondition, "failed to get exchange rate")
+				s, _ = s.WithDetails(&errdetails.ErrorInfo{
+					Domain: "bank.com",
+					Reason: "failed to get exchange rate",
+					Metadata: map[string]string{
+						"from_currency": req.FromCurrency,
+						"to_currency":   req.ToCurrency,
+					},
+				})
+
+				return s.Err()
+			}
 
 			stream.Send(&bank.ExchangeRateResponse{
 				FromCurrency: req.FromCurrency,
@@ -119,6 +142,21 @@ func (a *GrpcAdapter) SummarizeTransactions(stream bank.BankService_SummarizeTra
 	}
 }
 
+func currentDatetime() *datetime.DateTime {
+	now := time.Now()
+
+	return &datetime.DateTime{
+		Year:       int32(now.Year()),
+		Month:      int32(now.Month()),
+		Day:        int32(now.Day()),
+		Hours:      int32(now.Hour()),
+		Minutes:    int32(now.Minute()),
+		Seconds:    int32(now.Second()),
+		Nanos:      int32(now.Second()),
+		TimeOffset: &datetime.DateTime_UtcOffset{},
+	}
+}
+
 func toTime(dt *datetime.DateTime) (time.Time, error) {
 	if dt == nil {
 		now := time.Now()
@@ -140,4 +178,58 @@ func toTime(dt *datetime.DateTime) (time.Time, error) {
 	)
 
 	return res, nil
+}
+
+func (a *GrpcAdapter) TransferMultiple(stream bank.BankService_TransferMultipleServer) error {
+	context := stream.Context()
+
+	for {
+		select {
+		case <-context.Done():
+			log.Println("client cancelou o streaming")
+			return nil
+		default:
+			req, err := stream.Recv()
+			if err == io.EOF {
+				return nil
+			}
+
+			if err != nil {
+				log.Printf("failed to receive transaction from client: %v\n", err)
+			}
+
+			tt := domainBank.TransferTransaction{
+				FromAccountNumber: req.FromAccountNumber,
+				ToAccountNumber:   req.ToAccountNumber,
+				Currency:          req.Currency,
+				Amount:            req.Amount,
+			}
+
+			_, tansferSuccess, err := a.bankService.Transfer(tt)
+			if err != nil {
+				log.Printf("failed to transfer transaction: %v\n", err)
+				return err
+			}
+
+			res := bank.TransferResponse{
+				FromAccountNumber: req.FromAccountNumber,
+				ToAccountNumber:   req.ToAccountNumber,
+				Currency:          req.Currency,
+				Amount:            req.Amount,
+				Timestamp:         currentDatetime(),
+			}
+
+			if tansferSuccess {
+				res.Status = bank.TransferStatus_TRANSFER_STATUS_SUCCESS
+			} else {
+				res.Status = bank.TransferStatus_TRANSFER_STATUS_FAILED
+			}
+
+			err = stream.Send(&res)
+			if err != nil {
+				log.Printf("failed to send transfer response: %v\n", err)
+				return err
+			}
+		}
+	}
 }

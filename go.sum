@@ -67,6 +67,10 @@ github.com/viquitorreis/my-grpc-proto v0.0.9 h1:z6aX+JI41m4K77tfIAGpgkXvQNfnkGj8
 github.com/viquitorreis/my-grpc-proto v0.0.9/go.mod h1:lmKdC9S8EkWn7b5fzP+Eq8gR1hQxx0CR8H1mztVcuHY=
 github.com/viquitorreis/my-grpc-proto v0.0.10 h1:p1ftSfwDwFZzCvVGzFQZmWvs34yAgyFkzw29fyIItXg=
 github.com/viquitorreis/my-grpc-proto v0.0.10/go.mod h1:lmKdC9S8EkWn7b5fzP+Eq8gR1hQxx0CR8H1mztVcuHY=
+github.com/viquitorreis/my-grpc-proto v0.0.11 h1:l6URBGcDC05NAsrlll3LwXV4o3Nwfw5iWXBuiDyLHB8=
+github.com/viquitorreis/my-grpc-proto v0.0.11/go.mod h1:lmKdC9S8EkWn7b5fzP+Eq8gR1hQxx0CR8H1mztVcuHY=
+github.com/viquitorreis/my-grpc-proto v0.0.12 h1:Two3IufCrEqYzJzu67SVxUJ3Ix9u+yZchSTZSzEeBTA=
+github.com/viquitorreis/my-grpc-proto v0.0.12/go.mod h1:lmKdC9S8EkWn7b5fzP+Eq8gR1hQxx0CR8H1mztVcuHY=
 go.uber.org/atomic v1.11.0 h1:ZvwS0R+56ePWxUNi+Atn9dWONBPp/AUETXlHW0DxSjE=
 go.uber.org/atomic v1.11.0/go.mod h1:LUxbIzbOniOlMKjJjyPfpl4v+PKK2cNJn91OQbhoJI0=
 golang.org/x/crypto v0.25.0 h1:ypSNr+bnYL2YhwoMt2zPxHFmbAN1KZs/njMG3hxUp30=
@@ -91,6 +95,8 @@ google.golang.org/genproto/googleapis/rpc v0.0.0-20240711142825-46eb208f015d h1:
 google.golang.org/genproto/googleapis/rpc v0.0.0-20240711142825-46eb208f015d/go.mod h1:Ue6ibwXGpU+dqIcODieyLOcgj7z8+IcskoNIgZxtrFY=
 google.golang.org/genproto/googleapis/rpc v0.0.0-20240722135656-d784300faade h1:oCRSWfwGXQsqlVdErcyTt4A93Y8fo0/9D4b1gnI++qo=
 google.golang.org/genproto/googleapis/rpc v0.0.0-20240722135656-d784300faade/go.mod h1:Ue6ibwXGpU+dqIcODieyLOcgj7z8+IcskoNIgZxtrFY=
+google.golang.org/genproto/googleapis/rpc v0.0.0-20240723171418-e6d459c13d2a h1:hqK4+jJZXCU4pW7jsAdGOVFIfLHQeV7LaizZKnZ84HI=
+google.golang.org/genproto/googleapis/rpc v0.0.0-20240723171418-e6d459c13d2a/go.mod h1:Ue6ibwXGpU+dqIcODieyLOcgj7z8+IcskoNIgZxtrFY=
 google.golang.org/grpc v1.65.0 h1:bs/cUb4lp1G5iImFFd3u5ixQzweKizoZJAwBNLR42lc=
 google.golang.org/grpc v1.65.0/go.mod h1:WgYC2ypjlB0EiQi6wdKixMqukr6lBc0Vo+oOgjrM5ZQ=
 google.golang.org/protobuf v1.34.2 h1:6xV6lTsCfpGD21XK49h7MhtcApnLqkfYgPcdHftf6hg=

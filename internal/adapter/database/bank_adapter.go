@@ -90,6 +90,11 @@ func (a *DatabaseAdapter) CreateTransferTransactionPair(fromAccountOrm BankAccou
 		return false, err
 	}
 
+	if err := tx.Create(&toTransactionOrm).Error; err != nil {
+		tx.Rollback()
+		return false, err
+	}
+
 	// recalculando o balanço da conta de origem
 	fromAccNewBal := fromAccountOrm.CurrentBalance - fromTransactionOrm.Amount
 

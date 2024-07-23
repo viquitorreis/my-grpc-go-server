@@ -12,9 +12,9 @@ type HelloServicePort interface {
 }
 
 type BankServicePort interface {
-	FindCurrentBalance(accountId string) float64
+	FindCurrentBalance(accountId string) (float64, error)
 	CreateExchangeRate(r bank.ExchangeRate) (uuid.UUID, error)
-	GetExchangeRate(fromCurrency, toCurrency string, ts time.Time) float64
+	GetExchangeRate(fromCurrency, toCurrency string, ts time.Time) (float64, error)
 	CreateTransaction(account string, t bank.Transaction) (uuid.UUID, error)
 	CalculateTransactionSummary(tsum *bank.TransactionSummary, trans bank.Transaction) error
 	Transfer(tt bank.TransferTransaction) (uuid.UUID, bool, error)
