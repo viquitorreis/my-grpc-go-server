@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/viquitorreis/my-grpc-go-server/internal/application/domain/bank"
+	"gorm.io/gorm"
 )
 
 func (a *DatabaseAdapter) GetBankAccountNumber(account string) (BankAccountOrm, error) {
@@ -30,12 +31,28 @@ func (a *DatabaseAdapter) CreateExchangeRate(r BankExchangeRateOrm) (uuid.UUID, 
 
 func (a *DatabaseAdapter) GetExchangeRate(fromCurrency, toCurrency string, ts time.Time) (BankExchangeRateOrm, error) {
 	var exchangeRateOrm BankExchangeRateOrm
+	startTime := ts.AddDate(-1, 0, 0) // 1 ano no passado
 
-	err := a.db.First(&exchangeRateOrm, `
+	err := a.db.Where(`
 		from_currency = ?
 		AND to_currency = ? 
 		AND (? BETWEEN valid_from_timestamp AND valid_to_timestamp)
-	`, fromCurrency, toCurrency, ts).Error
+	`, fromCurrency, toCurrency, ts).
+		Or(`
+		from_currency = ?
+		AND to_currency = ? 
+		AND valid_from_timestamp >= ?
+	`, fromCurrency, toCurrency, startTime).
+		Find(&exchangeRateOrm).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			log.Printf("Exchange rate not found for %s to %s at %s\n", fromCurrency, toCurrency, ts)
+			// Handle the not found case specifically if needed
+		} else {
+			log.Printf("Database error: %v\n", err)
+		}
+	}
 
 	return exchangeRateOrm, err
 }

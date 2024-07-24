@@ -106,13 +106,18 @@ func (s *BankService) Transfer(tt bank.TransferTransaction) (uuid.UUID, bool, er
 	fromAccOrm, err := s.db.GetBankAccountNumber(tt.FromAccountNumber)
 	if err != nil {
 		log.Printf("failed to get bank account number: %v\n", err)
-		return uuid.Nil, false, err
+		return uuid.Nil, false, bank.ErrTransferSourceAccountNotFound
+	}
+
+	// checando se a conta de destino tem saldo suficiente
+	if fromAccOrm.CurrentBalance < tt.Amount {
+		return uuid.Nil, false, bank.ErrTransferTransactionPair
 	}
 
 	toAccOrm, err := s.db.GetBankAccountNumber(tt.ToAccountNumber)
 	if err != nil {
 		log.Printf("failed to get bank account number: %v\n", err)
-		return uuid.Nil, false, err
+		return uuid.Nil, false, bank.ErrTransferSourceAccountNotFound
 	}
 
 	fromTransactionOrm := database.BankTransactionOrm{
@@ -154,13 +159,13 @@ func (s *BankService) Transfer(tt bank.TransferTransaction) (uuid.UUID, bool, er
 
 	if _, err := s.db.CreateTransfer(transferOrm); err != nil {
 		log.Printf("failed to create transfer de %v para %v : %v\n", tt.FromAccountNumber, tt.ToAccountNumber, err)
-		return uuid.Nil, false, err
+		return uuid.Nil, false, bank.ErrTransferRecordFailed
 	}
 
-	if transferPairsucess, err := s.db.CreateTransferTransactionPair(fromAccOrm, toAccOrm, fromTransactionOrm, toTransactionOrm); transferPairsucess {
+	if transferPairsucess, _ := s.db.CreateTransferTransactionPair(fromAccOrm, toAccOrm, fromTransactionOrm, toTransactionOrm); transferPairsucess {
 		s.db.UpdateTransferStatus(transferOrm, true)
 		return newTransferUUID, true, nil
 	} else {
-		return newTransferUUID, false, err
+		return newTransferUUID, false, bank.ErrTransferTransactionPair
 	}
 }
