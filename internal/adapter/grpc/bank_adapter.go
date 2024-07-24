@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/google/uuid"
 	domainBank "github.com/viquitorreis/my-grpc-go-server/internal/application/domain/bank"
 	"github.com/viquitorreis/my-grpc-proto/protogen/go/bank"
 	"google.golang.org/genproto/googleapis/type/date"
@@ -105,7 +107,7 @@ func (a *GrpcAdapter) SummarizeTransactions(stream bank.BankService_SummarizeTra
 		}
 
 		if err != nil {
-			log.Fatalln("failed to receive transaction from client: %v\n", err)
+			log.Fatalf("failed to receive transaction from client: %v\n", err)
 		}
 
 		ts, err := toTime(req.Timestamp)
@@ -127,10 +129,31 @@ func (a *GrpcAdapter) SummarizeTransactions(stream bank.BankService_SummarizeTra
 			TransactionType: tranType,
 		}
 
-		_, err = a.bankService.CreateTransaction(req.AccountNumber, tcurrent)
-		if err != nil {
-			log.Printf("failed to create transaction: %v\n", err)
-			return err
+		accUUID, err := a.bankService.CreateTransaction(req.AccountNumber, tcurrent)
+		if err != nil && accUUID == uuid.Nil {
+			s := status.New(codes.InvalidArgument, err.Error())
+			s, _ = s.WithDetails(&errdetails.BadRequest{
+				FieldViolations: []*errdetails.BadRequest_FieldViolation{
+					{
+						Field:       "account_number",
+						Description: "invalid account number",
+					},
+				},
+			})
+
+			return s.Err()
+		} else if err != nil && accUUID != uuid.Nil {
+			s := status.New(codes.InvalidArgument, err.Error())
+			s, _ = s.WithDetails(&errdetails.BadRequest{
+				FieldViolations: []*errdetails.BadRequest_FieldViolation{
+					{
+						Field:       "amount",
+						Description: fmt.Sprintf("invalid amount: %v. Exceeds available balance", req.Amount),
+					},
+				},
+			})
+
+			return s.Err()
 		}
 
 		// chamando camada service para calular o resumo da transação
