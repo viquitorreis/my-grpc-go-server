@@ -19,3 +19,7 @@ type BankServicePort interface {
 	CalculateTransactionSummary(tsum *bank.TransactionSummary, trans bank.Transaction) error
 	Transfer(tt bank.TransferTransaction) (uuid.UUID, bool, error)
 }
+
+type ResiliencyServicePort interface {
+	GenerateResiliency(minDelaySec int32, maxDelaySec int32, statusCodes []uint32) (string, uint32)
+}
