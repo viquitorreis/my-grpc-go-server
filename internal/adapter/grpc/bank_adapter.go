@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -231,7 +232,7 @@ func (a *GrpcAdapter) TransferMultiple(stream bank.BankService_TransferMultipleS
 			_, tansferSuccess, err := a.bankService.Transfer(tt)
 			if err != nil {
 				log.Printf("failed to transfer transaction: %v\n", err)
-				return err
+				return buildTransferErrorStatusGrpc(err, req)
 			}
 
 			res := bank.TransferResponse{
@@ -254,5 +255,65 @@ func (a *GrpcAdapter) TransferMultiple(stream bank.BankService_TransferMultipleS
 				return err
 			}
 		}
+	}
+}
+
+func buildTransferErrorStatusGrpc(err error, req *bank.TransferRequest) error {
+	switch {
+	case errors.Is(err, domainBank.ErrTransferSourceAccountNotFound):
+		s := status.New(codes.FailedPrecondition, err.Error())
+		s, _ = s.WithDetails(&errdetails.PreconditionFailure{
+			Violations: []*errdetails.PreconditionFailure_Violation{
+				{
+					Type:        "INVALID_ACCOUNT",
+					Subject:     "Source account not found",
+					Description: fmt.Sprintf("source account (from %v) not found", req.FromAccountNumber),
+				},
+			},
+		})
+
+		return s.Err()
+	case errors.Is(err, domainBank.ErrTransferDestinationAccountNotFound):
+		s := status.New(codes.FailedPrecondition, err.Error())
+		s, _ = s.WithDetails(&errdetails.PreconditionFailure{
+			Violations: []*errdetails.PreconditionFailure_Violation{
+				{
+					Type:        "INVALID_ACCOUNT",
+					Subject:     "Destination account not found",
+					Description: fmt.Sprintf("destination account (to %v) not found", req.ToAccountNumber),
+				},
+			},
+		})
+
+		return s.Err()
+	case errors.Is(err, domainBank.ErrTransferRecordFailed):
+		s := status.New(codes.Internal, err.Error())
+		s, _ = s.WithDetails(&errdetails.Help{
+			Links: []*errdetails.Help_Link{
+				{
+					Url:         "my-bank-website.com/faq",
+					Description: "Bank FAQ",
+				},
+			},
+		})
+
+		return s.Err()
+	case errors.Is(err, domainBank.ErrTransferTransactionPair):
+		s := status.New(codes.InvalidArgument, err.Error())
+		s, _ = s.WithDetails(&errdetails.ErrorInfo{
+			Domain: "my-bank-website.com",
+			Reason: "TRANSACTION_PAIR_FAILED",
+			Metadata: map[string]string{
+				"from_account": req.FromAccountNumber,
+				"to_account":   req.ToAccountNumber,
+				"currency":     req.Currency,
+				"amount":       fmt.Sprintf("%f", req.Amount),
+			},
+		})
+
+		return s.Err()
+	default:
+		s := status.New(codes.Unknown, err.Error())
+		return s.Err()
 	}
 }

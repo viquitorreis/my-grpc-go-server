@@ -18,6 +18,7 @@ func main() {
 	log.SetFlags(0)
 	log.SetOutput(&logWriter{})
 
+	// docker run --name my-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_USER=postgres -e POSTGRES_DB=postgres -p 5432:5432 -d postgres
 	pgDB, err := sql.Open("postgres", "postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable")
 	if err != nil {
 		log.Fatalf("Error opening database connection: %v", err)
@@ -32,10 +33,11 @@ func main() {
 
 	hs := &app.HelloService{}
 	bs := app.NewBankService(databaseAdapter)
+	rs := &app.ResiliencyService{}
 
 	go generateExchangeRates(bs, "USD", "BRL", 5*time.Second)
 
-	grpcAdapter := mygrpc.NewGrpcAdapter(hs, bs, 9090)
+	grpcAdapter := mygrpc.NewGrpcAdapter(hs, bs, rs, 9090)
 	grpcAdapter.Run()
 }
 
