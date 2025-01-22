@@ -43,7 +43,17 @@ func (a *GrpcAdapter) Run() {
 
 	log.Printf("gRPC server running on port %d", a.grpcPort)
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+	// interceptor deve ficar dentro das options do server
+	// grpc.ChainUnaryInterceptor(
+	// 	interceptor.LogUnaryServerInterceptor(),
+	// 	interceptor.BasicUnaryServerInterceptor(),
+	// ),
+	// grpc.ChainStreamInterceptor(
+	// 	interceptor.LogStreamServerInterceptor(),
+	// 	interceptor.BasicStreamServerInterceptor(),
+	// ),
+	)
 	a.server = grpcServer
 
 	hello.RegisterHelloServiceServer(grpcServer, a)
